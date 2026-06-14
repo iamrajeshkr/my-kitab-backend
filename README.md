@@ -50,6 +50,26 @@ npm run dev                 # http://localhost:8787
 
 `GET /health` is unauthenticated.
 
+## Deploy
+
+The app runs two ways from one codebase (`src/app.ts` holds the route tree):
+
+- **Persistent-Node host** (Railway / Render / Fly / a VM) — runs as-is via
+  `src/index.ts` (`@hono/node-server`). `npm run build && npm start`, set env vars,
+  done. No changes needed.
+- **Vercel** (serverless) — uses `api/index.ts` (`@hono/node-server/vercel`) +
+  `vercel.json` (rewrites every path to the single function). To deploy:
+  1. **Set the Vercel project Root Directory to `api`** (the repo root is the
+     parent; `package.json` + `vercel.json` live in `api/`).
+  2. Add env vars in Vercel (`vercel env add` or dashboard): `SUPABASE_URL`,
+     `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`,
+     `GEMINI_API_KEY`, `CHAT_MODEL`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`. (No `PORT`.)
+  3. `vercel --prod`. Point the app's `EXPO_PUBLIC_API_URL` at the deployment URL.
+
+  Notes: the embeddings **backfill is a CLI, not a request handler** — run it
+  locally or wire it as a Vercel **Cron** (`crons` in `vercel.json` → a protected
+  endpoint). Gemini-calling routes finish well within the 300s function timeout.
+
 ## What the client must change
 
 The Expo app currently calls Supabase and Gemini directly with `EXPO_PUBLIC_*`
