@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger as honoLogger } from 'hono/logger';
+import { swaggerUI } from '@hono/swagger-ui';
+import { openapiSpec } from './openapi.js';
 import { auth, type AppBindings } from './middleware/auth.js';
 import { onError } from './middleware/error.js';
 
@@ -30,6 +32,10 @@ app.onError(onError);
 
 // Unauthenticated liveness probe.
 app.get('/health', (c) => c.json({ ok: true, service: 'kitab-api' }));
+
+// Interactive API docs — Swagger UI at /docs, served from the OpenAPI spec.
+app.get('/openapi.json', (c) => c.json(openapiSpec));
+app.get('/docs', swaggerUI({ url: '/openapi.json' }));
 
 // Public auth (user creation + token minting). Registered before the guarded
 // group so /v1/auth/* is reachable without a token.
