@@ -12,7 +12,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "backfill": "tsx src/scripts/backfill-embeddings.ts"
+    "backfill": "tsx src/scripts/backfill-embeddings.ts",
+    "seed:resonance": "tsx src/scripts/seed-resonance.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.0",
