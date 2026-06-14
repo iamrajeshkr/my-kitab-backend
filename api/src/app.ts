@@ -31,22 +31,6 @@ app.onError(onError);
 // Unauthenticated liveness probe.
 app.get('/health', (c) => c.json({ ok: true, service: 'kitab-api' }));
 
-// TEMP diagnostic: can the function reach Supabase? (GET, no body parsing)
-app.get('/debug/supabase', async (c) => {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY ?? '';
-  const started = Date.now();
-  try {
-    const r = await fetch(`${url}/rest/v1/bites?select=id&limit=1`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-      signal: AbortSignal.timeout(8000),
-    });
-    return c.json({ reachable: true, status: r.status, ms: Date.now() - started, url });
-  } catch (e: any) {
-    return c.json({ reachable: false, error: String(e?.name ?? e), ms: Date.now() - started, url });
-  }
-});
-
 // Public auth (user creation + token minting). Registered before the guarded
 // group so /v1/auth/* is reachable without a token.
 app.route('/v1/auth', authPublic);
