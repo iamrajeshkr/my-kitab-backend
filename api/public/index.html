@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kitab API</title>
+<style>
+  body{font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:680px;margin:48px auto;padding:0 20px;color:#26203A;background:#F8F4EB}
+  h1{font-family:Georgia,serif;font-size:26px;margin:0 0 4px}
+  .sub{color:#7A7290;margin:0 0 28px}
+  .m{display:inline-block;min-width:52px;font-weight:600;color:#4B3F8C}
+  .pub{color:#C75B39;font-size:12px}
+  code{background:#F0E8D8;padding:1px 6px;border-radius:6px;font-size:13px}
+  .row{padding:7px 0;border-bottom:1px solid #E4DBC8}
+  .desc{color:#7A7290;font-size:13px}
+</style>
+<h1>Kitab API</h1>
+<p class="sub">AI control plane — guest auth, RAG, recommendations, companion. This is an API; call it over HTTP. <span class="pub">●</span> = public.</p>
+
+<div class="row"><span class="m">GET</span> <code>/health</code> <span class="pub">●</span> <span class="desc">— liveness</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/auth/guest</code> <span class="pub">●</span> <span class="desc">— create guest user, mint token</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/compose-page</code> <span class="desc">— tonight's page (RAG + sources)</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/ask-line</code> <span class="desc">— answer about a highlighted line</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/companion</code> <span class="desc">— Ask Kitab (reply + recommendations)</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/recommend</code> <span class="desc">— CF + weather-fit picks</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/search</code> <span class="desc">— feeling-based discovery</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/reflections</code> <span class="desc">— store + enrich a reflection</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/weather</code> <span class="desc">— inner-weather check-in</span></div>
+<div class="row"><span class="m">POST</span> <code>/v1/events</code> <span class="desc">— batched event ingest</span></div>
+<div class="row"><span class="m">GET</span> <code>/v1/garden</code> <span class="desc">— felt-progress summary</span></div>
+<div class="row"><span class="m">·</span> <code>/v1/mirror</code> · <code>/v1/letter</code> · <code>/v1/sit</code> · <code>/v1/practices</code> <span class="desc">— portrait, letter, daily sit, practices</span></div>
+
+<p class="sub" style="margin-top:28px">All <code>/v1/*</code> except <code>/v1/auth/guest</code> require <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+</html>
