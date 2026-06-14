@@ -21,6 +21,7 @@ import { practices } from './routes/practices.js';
 import { garden } from './routes/garden.js';
 import { companion } from './routes/companion.js';
 import { catalog } from './routes/catalog.js';
+import { progress } from './routes/progress.js';
 
 // The configured Hono app — no server binding here. Local dev wraps it in
 // @hono/node-server (src/index.ts); Vercel wraps it in @hono/node-server/vercel
@@ -59,6 +60,7 @@ v1.route('/practices', practices);
 v1.route('/garden', garden);
 v1.route('/companion', companion);
 v1.route('/catalog', catalog);
+v1.route('/progress', progress);
 app.route('/v1', v1);
 
 export default app;
