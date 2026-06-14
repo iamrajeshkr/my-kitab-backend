@@ -4,7 +4,9 @@ import type { AppBindings } from '../middleware/auth.js';
 import { admin } from '../lib/supabase.js';
 import { mintAccessToken } from '../lib/token.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
-import { SignupReq, SigninReq } from '../lib/schemas.js';
+import { SignupReq, SigninReq, ComposedPage } from '../lib/schemas.js';
+import { retrieve, groundingBlock } from '../lib/rag.js';
+import { generateStructured } from '../lib/ai.js';
 
 // PUBLIC routes (no auth middleware) — this is how a user comes into existence.
 // Guest-first: the client sends a stable device_id; we upsert a profile and mint
@@ -65,6 +67,32 @@ authPublic.post('/signup', async (c) => {
 
   const token = await mintAccessToken(data!.id as string);
   return c.json({ userId: data!.id, token });
+});
+
+// PUBLIC preview compose — the value moment in onboarding, before an account
+// exists. No memory, no logging. (Unauthenticated LLM call — fine at this scale;
+// add per-IP rate limiting if it ever gets abused.)
+const PreviewReq = z.object({
+  weather: z.enum(['heavy', 'restless', 'cloudy', 'clear', 'bright']).optional(),
+  intent: z.string().max(280).optional(),
+  lang: z.enum(['en', 'hi']).default('en'),
+});
+authPublic.post('/preview-page', async (c) => {
+  const { weather, intent, lang } = PreviewReq.parse(await c.req.json().catch(() => ({})));
+  const query =
+    [weather ? `feeling ${weather}` : '', intent ?? ''].filter(Boolean).join('. ') ||
+    'beginning a practice of calm';
+  const chunks = await retrieve(query, lang, { k: 6 });
+  const system =
+    'You are Kitab, a warm, literary companion. Write ONE short original page (1–2 short ' +
+    'paragraphs) for the reader, grounded in the PASSAGES — do not invent teachings. ' +
+    (lang === 'hi' ? 'Write in natural Hindi.' : 'Write in calm, plain English.');
+  const page = await generateStructured(ComposedPage, {
+    system,
+    prompt: `READER: ${query}\n\nPASSAGES:\n${groundingBlock(chunks)}`,
+    temperature: 0.7,
+  });
+  return c.json({ title: page.title, paragraphs: page.paragraphs });
 });
 
 // Sign in with username + password.
