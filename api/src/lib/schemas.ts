@@ -71,6 +71,17 @@ export const RecommendReq = z.object({
   limit: z.number().int().min(1).max(30).default(10),
 });
 
+export const SignupReq = z.object({
+  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_.]+$/, 'letters, numbers, _ or . only'),
+  password: z.string().min(6).max(128),
+  display_name: z.string().max(80).optional(),
+});
+
+export const SigninReq = z.object({
+  username: z.string().min(1).max(32),
+  password: z.string().min(1).max(128),
+});
+
 export const CompanionReq = z.object({
   query: z.string().min(1).max(500),
   lang: z.enum(['en', 'hi']).default('en'),

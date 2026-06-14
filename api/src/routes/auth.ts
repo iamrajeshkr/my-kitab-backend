@@ -3,6 +3,8 @@ import { z } from 'zod';
 import type { AppBindings } from '../middleware/auth.js';
 import { admin } from '../lib/supabase.js';
 import { mintAccessToken } from '../lib/token.js';
+import { hashPassword, verifyPassword } from '../lib/password.js';
+import { SignupReq, SigninReq } from '../lib/schemas.js';
 
 // PUBLIC routes (no auth middleware) — this is how a user comes into existence.
 // Guest-first: the client sends a stable device_id; we upsert a profile and mint
@@ -44,4 +46,36 @@ authPublic.post('/guest', async (c) => {
 
   const token = await mintAccessToken(userId);
   return c.json({ userId, token });
+});
+
+// Username + password account creation. No email, no verification.
+authPublic.post('/signup', async (c) => {
+  const { username, password, display_name } = SignupReq.parse(await c.req.json());
+  const uname = username.trim().toLowerCase();
+
+  const { data: existing } = await admin.from('profiles').select('id').eq('username', uname).maybeSingle();
+  if (existing) return c.json({ error: 'That username is taken.' }, 409);
+
+  const { data, error } = await admin
+    .from('profiles')
+    .insert({ username: uname, password_hash: hashPassword(password), display_name: display_name ?? username, is_guest: false })
+    .select('id')
+    .single();
+  if (error) throw error;
+
+  const token = await mintAccessToken(data!.id as string);
+  return c.json({ userId: data!.id, token });
+});
+
+// Sign in with username + password.
+authPublic.post('/signin', async (c) => {
+  const { username, password } = SigninReq.parse(await c.req.json());
+  const uname = username.trim().toLowerCase();
+
+  const { data } = await admin.from('profiles').select('id, password_hash').eq('username', uname).maybeSingle();
+  if (!data || !verifyPassword(password, data.password_hash as string | null)) {
+    return c.json({ error: 'Wrong username or password.' }, 401);
+  }
+  const token = await mintAccessToken(data.id as string);
+  return c.json({ userId: data.id, token });
 });
