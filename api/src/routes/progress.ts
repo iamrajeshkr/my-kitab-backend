@@ -20,13 +20,29 @@ export const progress = new Hono<AppBindings>();
 progress.post('/', async (c) => {
   const { kind, id, position } = SaveReq.parse(await c.req.json());
   const db = c.get('db');
+  const completed = (position as any).completed === true;
+
   await db.rpc('upsert_progress', { p_kind: kind, p_item: id, p_position: position });
   await db.rpc('log_event', {
-    p_type: (position as any).completed ? 'listen_complete' : 'listen_progress',
+    p_type: completed ? 'listen_complete' : 'listen_progress',
     p_kind: kind,
     p_item: id,
     p_payload: position,
   });
+
+  // Sticky completion marker: set once, never cleared on replay. It's the durable
+  // "finished" record that feeds the Garden. Continue stays position-based (an item
+  // replayed to <100% resurfaces there); recommend/up-next exclusion rides the
+  // listen_complete event above — so a finished item is never re-suggested, yet
+  // stays fully searchable and replayable.
+  if (completed) {
+    await db
+      .from('progress')
+      .update({ completed_at: new Date().toISOString() })
+      .eq('item_kind', kind)
+      .eq('item_id', id)
+      .is('completed_at', null);
+  }
   return c.json({ ok: true });
 });
 
@@ -48,8 +64,11 @@ progress.get('/', async (c) => {
     .from('progress')
     .select('item_kind, item_id, position, updated_at')
     .order('updated_at', { ascending: false })
-    .limit(12);
-  const list = rows ?? [];
+    .limit(40);
+  // Continue = items whose *current* place is < 100%. An item finished long ago
+  // (completed_at set) but replayed partway through still belongs here, so we key
+  // off the live position flag, not the sticky marker.
+  const list = (rows ?? []).filter((r: any) => r.position?.completed !== true).slice(0, 12);
   if (!list.length) return c.json({ items: [] });
 
   const ids = [...new Set(list.map((r) => r.item_id as string))];
