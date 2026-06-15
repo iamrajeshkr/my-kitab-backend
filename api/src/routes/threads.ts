@@ -6,15 +6,21 @@ import { embedText, toVectorLiteral } from '../lib/ai.js';
 // semantic query over the catalog (reuses the embeddings + search RPC), so the
 // items stay fresh as the library grows. Themes are static → cache per lang.
 
+// note + colors turn each thread into an editorial "reading room" (Discover).
 const THEMES = [
-  { slug: 'comparison', title: 'When comparison creeps in', q: 'comparing myself to others, envy, feeling behind, not enough' },
-  { slug: 'sleep', title: 'Wind down to sleep', q: 'restless at night, calm the racing mind before sleep, deep rest' },
-  { slug: 'focus', title: 'Find your focus', q: 'distracted, scattered attention, deep focus, single-tasking, presence' },
-  { slug: 'anger', title: 'When anger rises', q: 'anger, frustration, irritation, responding from a calm centre' },
-  { slug: 'meaning', title: 'A bigger why', q: 'purpose, meaning, what matters, values, becoming who you want to be' },
+  { slug: 'comparison', title: 'When comparison creeps in', q: 'comparing myself to others, envy, feeling behind, not enough',
+    note: "For the quiet ache of measuring your life against everyone else's.", bg: '#2A3B22', accent: '#E2A24A' },
+  { slug: 'sleep', title: 'Learning to rest', q: 'restless at night, calm the racing mind before sleep, deep rest',
+    note: "Ways back to sleep when the mind won't close the door.", bg: '#43395E', accent: '#C4A6E8' },
+  { slug: 'focus', title: 'Find your focus', q: 'distracted, scattered attention, deep focus, single-tasking, presence',
+    note: 'Gather a scattered mind back to one quiet point.', bg: '#1F4A45', accent: '#E2A24A' },
+  { slug: 'anger', title: 'When anger rises', q: 'anger, frustration, irritation, responding from a calm centre',
+    note: 'Meet the heat with a steadier, kinder centre.', bg: '#A8452A', accent: '#F0CE86' },
+  { slug: 'meaning', title: 'A bigger why', q: 'purpose, meaning, what matters, values, becoming who you want to be',
+    note: 'For the search beneath the day-to-day — what it all is for.', bg: '#13233A', accent: '#E2A24A' },
 ];
 
-type Thread = { slug: string; title: string; items: { kind: string; id: string }[] };
+type Thread = { slug: string; title: string; note: string; bg: string; accent: string; items: { kind: string; id: string }[] };
 
 const cache = new Map<string, Thread[]>();
 
@@ -37,7 +43,7 @@ threads.get('/', async (c) => {
           p_lang: lang,
           match_count: 8,
         });
-        return { slug: t.slug, title: t.title, items: (data ?? []) as Thread['items'] };
+        return { slug: t.slug, title: t.title, note: t.note, bg: t.bg, accent: t.accent, items: (data ?? []) as Thread['items'] };
       })
     );
     cache.set(lang, raw);
@@ -49,6 +55,9 @@ threads.get('/', async (c) => {
   const threadsOut = raw.map((t) => ({
     slug: t.slug,
     title: t.title,
+    note: t.note,
+    bg: t.bg,
+    accent: t.accent,
     items: t.items.filter((it) => !doneSet.has(`${it.kind}:${it.id}`)).slice(0, 4),
   }));
 
