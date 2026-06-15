@@ -41,7 +41,7 @@ threads.get('/', async (c) => {
         const { data } = await admin.rpc('search_items_by_feeling', {
           query_embedding: toVectorLiteral(emb),
           p_lang: lang,
-          match_count: 8,
+          match_count: 16,
         });
         return { slug: t.slug, title: t.title, note: t.note, bg: t.bg, accent: t.accent, items: (data ?? []) as Thread['items'] };
       })
@@ -58,7 +58,7 @@ threads.get('/', async (c) => {
     note: t.note,
     bg: t.bg,
     accent: t.accent,
-    items: t.items.filter((it) => !doneSet.has(`${it.kind}:${it.id}`)).slice(0, 4),
+    items: t.items.filter((it) => !doneSet.has(`${it.kind}:${it.id}`)).slice(0, 12),
   }));
 
   return c.json({ threads: threadsOut });
