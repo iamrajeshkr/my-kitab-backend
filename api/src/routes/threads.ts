@@ -14,27 +14,43 @@ const THEMES = [
   { slug: 'meaning', title: 'A bigger why', q: 'purpose, meaning, what matters, values, becoming who you want to be' },
 ];
 
-const cache = new Map<string, unknown>();
+type Thread = { slug: string; title: string; items: { kind: string; id: string }[] };
+
+const cache = new Map<string, Thread[]>();
 
 export const threads = new Hono<AppBindings>();
 
 threads.get('/', async (c) => {
   const lang = c.req.query('lang') === 'hi' ? 'hi' : 'en';
-  if (cache.has(lang)) return c.json(cache.get(lang));
 
-  const admin = c.get('adminDb');
-  const out = await Promise.all(
-    THEMES.map(async (t) => {
-      const emb = await embedText(t.q, 'RETRIEVAL_QUERY');
-      const { data } = await admin.rpc('search_items_by_feeling', {
-        query_embedding: toVectorLiteral(emb),
-        p_lang: lang,
-        match_count: 4,
-      });
-      return { slug: t.slug, title: t.title, items: data ?? [] };
-    })
-  );
-  const payload = { threads: out };
-  cache.set(lang, payload);
-  return c.json(payload);
+  // The themed search (embed + vector) is identical for everyone, so cache it
+  // per-lang. We over-fetch (8) to leave headroom for the per-user finished
+  // filter below, which can't be cached because it's user-specific.
+  let raw = cache.get(lang) as Thread[] | undefined;
+  if (!raw) {
+    const admin = c.get('adminDb');
+    raw = await Promise.all(
+      THEMES.map(async (t) => {
+        const emb = await embedText(t.q, 'RETRIEVAL_QUERY');
+        const { data } = await admin.rpc('search_items_by_feeling', {
+          query_embedding: toVectorLiteral(emb),
+          p_lang: lang,
+          match_count: 8,
+        });
+        return { slug: t.slug, title: t.title, items: (data ?? []) as Thread['items'] };
+      })
+    );
+    cache.set(lang, raw);
+  }
+
+  // Drop anything this user has finished (same rule as up-next), then trim to 4.
+  const { data: done } = await c.get('db').from('progress').select('item_kind, item_id').not('completed_at', 'is', null);
+  const doneSet = new Set((done ?? []).map((r: any) => `${r.item_kind}:${r.item_id}`));
+  const threadsOut = raw.map((t) => ({
+    slug: t.slug,
+    title: t.title,
+    items: t.items.filter((it) => !doneSet.has(`${it.kind}:${it.id}`)).slice(0, 4),
+  }));
+
+  return c.json({ threads: threadsOut });
 });
