@@ -47,6 +47,28 @@ catalog.get('/', async (c) => {
   return c.json({ bites, journeys, summaries });
 });
 
+// GET /v1/catalog/browse?kind=all|byte|journey|summary&page=0&limit=30 — a
+// paginated, lean slice of the library for the Discover list. Reads the
+// content_items view (union of all three tables) so "all" works in one query;
+// range pagination keeps payloads small and lets the client lazy-load on scroll.
+catalog.get('/browse', async (c) => {
+  const kind = c.req.query('kind') ?? 'all';
+  const page = Math.max(0, Number.parseInt(c.req.query('page') ?? '0', 10) || 0);
+  const limit = Math.min(50, Math.max(1, Number.parseInt(c.req.query('limit') ?? '30', 10) || 30));
+  const from = page * limit;
+
+  let q = c.get('adminDb').from('content_items').select('kind, id, title, author, cover, category');
+  if (kind !== 'all') q = q.eq('kind', kind);
+  const { data, error } = await q
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: true })
+    .range(from, from + limit - 1);
+  if (error) throw error;
+
+  const items = data ?? [];
+  return c.json({ items, page, hasMore: items.length === limit });
+});
+
 // GET /v1/catalog/:kind/:id — full item (coerced) for the detail screen.
 catalog.get('/:kind/:id', async (c) => {
   const table = TABLE[c.req.param('kind')];
