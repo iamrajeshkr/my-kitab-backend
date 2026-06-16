@@ -18,6 +18,17 @@ sit.post('/', async (c) => {
   const { weather, lang } = SitReq.parse(await c.req.json());
   const db = c.get('db');
   const userId = c.get('userId');
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Today's sit is once-daily and idempotent — if it's already been built, return
+  // it instantly instead of re-running the recommender + the LLM (which cost ~3s).
+  const { data: existing } = await db
+    .from('sits')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('for_date', today)
+    .maybeSingle();
+  if (existing) return c.json(existing);
 
   const { data: recs } = await c.get('adminDb').rpc('recommend_for_user', {
     p_user: userId,
@@ -42,7 +53,6 @@ sit.post('/', async (c) => {
     carry: plan.carry,
   };
 
-  const today = new Date().toISOString().slice(0, 10);
   const { data: saved, error } = await db
     .from('sits')
     .upsert({ user_id: userId, for_date: today, weather, plan: fullPlan }, { onConflict: 'user_id,for_date' })

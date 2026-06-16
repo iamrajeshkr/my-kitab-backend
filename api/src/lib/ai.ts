@@ -49,7 +49,7 @@ export const toVectorLiteral = (v: number[]): string => `[${v.join(',')}]`;
 // the model retries on malformed output. One place to tune model/temperature.
 export async function generateStructured<T>(
   schema: z.ZodType<T>,
-  opts: { system?: string; prompt: string; temperature?: number }
+  opts: { system?: string; prompt: string; temperature?: number; maxOutputTokens?: number }
 ): Promise<T> {
   const { output } = await generateText({
     model: chatModel,
@@ -57,6 +57,14 @@ export async function generateStructured<T>(
     ...(opts.system ? { system: opts.system } : {}),
     prompt: opts.prompt,
     temperature: opts.temperature ?? 0.6,
+    // Cap output so the model can't ramble. Keep it generous: gemini-2.5-flash is
+    // a thinking model and we disable thinking below, but the JSON envelope still
+    // needs headroom (too-tight a cap truncates the structured output → parse fail).
+    maxOutputTokens: opts.maxOutputTokens ?? 768,
+    // Disable internal "thinking" — these are short, well-specified structured
+    // tasks, and thinking adds seconds of latency (and silently eats the output
+    // token budget). This is the single biggest speedup for every AI route.
+    providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
   });
   return output as T;
 }

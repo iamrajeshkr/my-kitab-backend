@@ -30,18 +30,19 @@ garden.get('/', async (c) => {
   const db = c.get('db');
   const userId = c.get('userId');
 
-  const { data: summary, error } = await db.rpc('garden_summary', { p_user: userId });
-  if (error) throw error;
+  const since = new Date(Date.now() - 32 * 86_400_000).toISOString();
 
-  // Finished reads (sticky completed_at), newest first, joined to display fields.
-  const { data: done } = await db
-    .from('progress')
-    .select('item_kind, item_id, completed_at')
-    .not('completed_at', 'is', null)
-    .order('completed_at', { ascending: false })
-    .limit(60);
-  const dlist = done ?? [];
+  // These four are independent — run them together instead of one after another.
+  const [summaryRes, doneRes, inProgRes, evRes] = await Promise.all([
+    db.rpc('garden_summary', { p_user: userId }),
+    db.from('progress').select('item_kind, item_id, completed_at').not('completed_at', 'is', null).order('completed_at', { ascending: false }).limit(60),
+    db.from('progress').select('item_kind', { count: 'exact', head: true }).is('completed_at', null),
+    db.from('events').select('created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(400),
+  ]);
+  if (summaryRes.error) throw summaryRes.error;
 
+  // Finished reads → join display fields (needs the ids from above).
+  const dlist = doneRes.data ?? [];
   let finished: any[] = [];
   if (dlist.length) {
     const ids = [...new Set(dlist.map((d: any) => d.item_id as string))];
@@ -61,21 +62,6 @@ garden.get('/', async (c) => {
       .filter(Boolean);
   }
 
-  // Started but unfinished — powers "N in progress" on the shelf.
-  const { count: inProgress } = await db
-    .from('progress')
-    .select('item_kind', { count: 'exact', head: true })
-    .is('completed_at', null);
-
-  // Quiet streak from recent activity.
-  const since = new Date(Date.now() - 32 * 86_400_000).toISOString();
-  const { data: ev } = await db
-    .from('events')
-    .select('created_at')
-    .gte('created_at', since)
-    .order('created_at', { ascending: false })
-    .limit(400);
-  const streak = computeStreak((ev ?? []).map((e: any) => e.created_at as string));
-
-  return c.json({ ...(summary as object), finished, in_progress: inProgress ?? 0, streak });
+  const streak = computeStreak((evRes.data ?? []).map((e: any) => e.created_at as string));
+  return c.json({ ...(summaryRes.data as object), finished, in_progress: inProgRes.count ?? 0, streak });
 });

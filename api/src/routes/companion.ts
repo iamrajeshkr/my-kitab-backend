@@ -13,6 +13,8 @@ companion.post('/', async (c) => {
   const { query, lang, history } = CompanionReq.parse(await c.req.json());
   const db = c.get('db');
 
+  // Memories don't depend on the embedding, so fetch them while we embed.
+  const memP = db.from('memories').select('text').eq('is_visible', true).order('salience', { ascending: false }).limit(5);
   const embedding = await embedText(query, 'RETRIEVAL_QUERY');
   const [{ data: items }, { data: mems }] = await Promise.all([
     c.get('adminDb').rpc('search_items_by_feeling', {
@@ -20,7 +22,7 @@ companion.post('/', async (c) => {
       p_lang: lang,
       match_count: 12,
     }),
-    db.from('memories').select('text').eq('is_visible', true).order('salience', { ascending: false }).limit(5),
+    memP,
   ]);
 
   const candidates = (items ?? []) as Array<{ kind: string; id: string; title: string; author: string | null; cover: string | null }>;

@@ -18,18 +18,17 @@ recommend.post('/', async (c) => {
   // item merely *opened* (e.g. read, never listened to the end) kept resurfacing
   // as the top pick. We also exclude in-progress items (those live in Continue).
   const want = Math.max(limit, 5);
-  const { data, error } = await c.get('adminDb').rpc('recommend_for_user', {
-    p_user: userId,
-    p_weather: weather ?? null,
-    p_limit: Math.max(want * 6, 30),
-  });
-  if (error) throw error;
-  const ranked = data ?? [];
-
-  const [{ data: ev }, { data: prog }] = await Promise.all([
+  // The RPC ranks candidates; the two exclusion queries don't depend on it, so
+  // run all three together rather than RPC-then-queries.
+  const [rankedRes, evRes, progRes] = await Promise.all([
+    c.get('adminDb').rpc('recommend_for_user', { p_user: userId, p_weather: weather ?? null, p_limit: Math.max(want * 6, 30) }),
     db.from('events').select('item_kind, item_id').in('type', ['page_open', 'page_complete', 'listen_complete']).not('item_id', 'is', null),
     db.from('progress').select('item_kind, item_id'),
   ]);
+  if (rankedRes.error) throw rankedRes.error;
+  const ranked = rankedRes.data ?? [];
+  const ev = evRes.data;
+  const prog = progRes.data;
   const engaged = new Set([...(ev ?? []), ...(prog ?? [])].map((r: any) => `${r.item_kind}:${r.item_id}`));
 
   const fresh = ranked.filter((it: any) => !engaged.has(`${it.kind}:${it.id}`));
