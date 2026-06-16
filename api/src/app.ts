@@ -26,6 +26,7 @@ import { threads } from './routes/threads.js';
 import { highlights } from './routes/highlights.js';
 import { arcs } from './routes/arcs.js';
 import { similar } from './routes/similar.js';
+import { playlists } from './routes/playlists.js';
 
 // The configured Hono app — no server binding here. Local dev wraps it in
 // @hono/node-server (src/index.ts); Vercel wraps it in @hono/node-server/vercel
@@ -69,6 +70,7 @@ v1.route('/threads', threads);
 v1.route('/highlights', highlights);
 v1.route('/arcs', arcs);
 v1.route('/similar', similar);
+v1.route('/playlists', playlists);
 app.route('/v1', v1);
 
 export default app;

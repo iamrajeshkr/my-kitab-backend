@@ -61,12 +61,12 @@ authPublic.post('/signup', async (c) => {
   const { data, error } = await admin
     .from('profiles')
     .insert({ username: uname, password_hash: hashPassword(password), display_name: display_name ?? username, is_guest: false })
-    .select('id')
+    .select('id, display_name')
     .single();
   if (error) throw error;
 
   const token = await mintAccessToken(data!.id as string);
-  return c.json({ userId: data!.id, token });
+  return c.json({ userId: data!.id, token, display_name: data!.display_name ?? username });
 });
 
 // PUBLIC preview compose — the value moment in onboarding, before an account
@@ -100,10 +100,10 @@ authPublic.post('/signin', async (c) => {
   const { username, password } = SigninReq.parse(await c.req.json());
   const uname = username.trim().toLowerCase();
 
-  const { data } = await admin.from('profiles').select('id, password_hash').eq('username', uname).maybeSingle();
+  const { data } = await admin.from('profiles').select('id, password_hash, display_name').eq('username', uname).maybeSingle();
   if (!data || !verifyPassword(password, data.password_hash as string | null)) {
     return c.json({ error: 'Wrong username or password.' }, 401);
   }
   const token = await mintAccessToken(data.id as string);
-  return c.json({ userId: data.id, token });
+  return c.json({ userId: data.id, token, display_name: (data.display_name as string) ?? uname });
 });
