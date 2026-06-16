@@ -11,12 +11,29 @@ export const recommend = new Hono<AppBindings>();
 recommend.post('/', async (c) => {
   const { weather, limit } = RecommendReq.parse(await c.req.json().catch(() => ({})));
   const userId = c.get('userId');
+  const db = c.get('db');
 
+  // Over-fetch ranked candidates, then drop anything the user has already engaged
+  // with. The RPC's own `seen` only excludes completed/saved/rated items, so an
+  // item merely *opened* (e.g. read, never listened to the end) kept resurfacing
+  // as the top pick. We also exclude in-progress items (those live in Continue).
+  const want = Math.max(limit, 5);
   const { data, error } = await c.get('adminDb').rpc('recommend_for_user', {
     p_user: userId,
     p_weather: weather ?? null,
-    p_limit: limit,
+    p_limit: Math.max(want * 6, 30),
   });
   if (error) throw error;
-  return c.json({ items: data ?? [] });
+  const ranked = data ?? [];
+
+  const [{ data: ev }, { data: prog }] = await Promise.all([
+    db.from('events').select('item_kind, item_id').in('type', ['page_open', 'page_complete', 'listen_complete']).not('item_id', 'is', null),
+    db.from('progress').select('item_kind, item_id'),
+  ]);
+  const engaged = new Set([...(ev ?? []), ...(prog ?? [])].map((r: any) => `${r.item_kind}:${r.item_id}`));
+
+  const fresh = ranked.filter((it: any) => !engaged.has(`${it.kind}:${it.id}`));
+  // Never return empty — if everything's been seen, fall back to the ranked list.
+  const items = (fresh.length ? fresh : ranked).slice(0, want);
+  return c.json({ items });
 });
