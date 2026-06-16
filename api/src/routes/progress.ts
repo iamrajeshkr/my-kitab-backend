@@ -71,9 +71,14 @@ progress.get('/', async (c) => {
   // would clutter "Pick up where you paused" the instant it's opened, at 0%. An
   // item finished long ago (completed_at set) but replayed partway still belongs
   // here, so we key off the live position, not the sticky marker.
+  // Journeys appear as soon as they're started — a journey row only exists after
+  // real playback (deliberate: detail → play), so any chapter at any position
+  // counts. We deliberately do NOT gate journeys on chapterSeq, which is the raw
+  // (possibly 0-based / non-contiguous) DB seq. Bites/summaries keep the 30s floor
+  // so a one-tap that's quickly abandoned doesn't clutter the rail.
   const MIN_SEC = 30;
-  const started = (p: any) => (p?.audioSec ?? 0) >= MIN_SEC || (p?.chapterSeq ?? 0) > 1;
-  const list = (rows ?? []).filter((r: any) => r.position?.completed !== true && started(r.position)).slice(0, 12);
+  const started = (kind: string, p: any) => kind === 'journey' || (p?.audioSec ?? 0) >= MIN_SEC;
+  const list = (rows ?? []).filter((r: any) => r.position?.completed !== true && started(r.item_kind, r.position)).slice(0, 12);
   if (!list.length) return c.json({ items: [] });
 
   const ids = [...new Set(list.map((r) => r.item_id as string))];
