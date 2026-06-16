@@ -14,7 +14,7 @@ function weekStart(): string {
   return d.toISOString().slice(0, 10);
 }
 
-// GET /v1/letter — the most recent letter from Kitab.
+// GET /v1/letter — the most recent letter from Bingent.
 letter.get('/', async (c) => {
   const { data } = await c.get('db')
     .from('letters').select('*').order('week_start', { ascending: false }).limit(1).maybeSingle();
@@ -42,9 +42,9 @@ letter.post('/generate', async (c) => {
   const out = await generateStructured(Letter, {
     temperature: 0.8,
     system:
-      'Write a short, warm letter (4–6 sentences) from "Kitab" to the reader, narrating their ' +
+      'Write a short, warm letter (4–6 sentences) from "Bingent" to the reader, narrating their ' +
       'week back to them — name the storms and the returns, one line that moved them, and one ' +
-      'honest note of progress. Sign off "— Kitab". ' +
+      'honest note of progress. Sign off "— Bingent". ' +
       (lang === 'hi' ? 'Write in Hindi (Devanagari).' : 'Write in plain, tender English.'),
     prompt,
   });

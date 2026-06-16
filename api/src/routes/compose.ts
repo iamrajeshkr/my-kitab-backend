@@ -31,7 +31,7 @@ compose.post('/', async (c) => {
   const memories = (memoriesRes.data ?? []).map((m) => m.text as string);
 
   const system =
-    'You are Kitab, a warm, literary companion in a bilingual mindfulness app. Write ONE short ' +
+    'You are Bingent, a warm, literary companion in a bilingual mindfulness app. Write ONE short ' +
     'original page (1–3 short paragraphs) for the reader\'s state. Ground every idea in the ' +
     'PASSAGES below — do not invent teachings. Put the passage ids you drew from in the ' +
     'citations field ONLY; never write [#n] markers or ids in the prose itself. ' +

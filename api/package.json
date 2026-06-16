@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Kitab AI control-plane — RAG composition, ask-this-line, the Mirror, embeddings, safety.",
+  "description": "Bingent AI control-plane — RAG composition, ask-this-line, the Mirror, embeddings, safety.",
   "engines": {
     "node": ">=20"
   },

@@ -84,7 +84,7 @@ authPublic.post('/preview-page', async (c) => {
     'beginning a practice of calm';
   const chunks = await retrieve(query, lang, { k: 6 });
   const system =
-    'You are Kitab, a warm, literary companion. Write ONE short original page (1–2 short ' +
+    'You are Bingent, a warm, literary companion. Write ONE short original page (1–2 short ' +
     'paragraphs) for the reader, grounded in the PASSAGES — do not invent teachings. ' +
     (lang === 'hi' ? 'Write in natural Hindi.' : 'Write in calm, plain English.');
   const page = await generateStructured(ComposedPage, {

@@ -15,7 +15,7 @@ const secured = [{ bearerAuth: [] }];
 export const openapiSpec = {
   openapi: '3.0.3',
   info: {
-    title: 'Kitab API',
+    title: 'Bingent API',
     version: '0.1.0',
     description:
       'AI control plane. Get a token from POST /v1/auth/guest, click **Authorize**, paste it, ' +
@@ -52,7 +52,7 @@ export const openapiSpec = {
     },
     '/v1/companion': {
       post: {
-        tags: ['ai'], summary: 'Ask Kitab — reply + recommendations',
+        tags: ['ai'], summary: 'Ask Bingent — reply + recommendations',
         requestBody: jsonBody({ query: { type: 'string' }, lang, history: { type: 'array', items: { type: 'object' } } }, ['query']),
         responses: ok,
       },

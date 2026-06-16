@@ -5,7 +5,7 @@ import { embedText, toVectorLiteral, generateStructured } from '../lib/ai.js';
 
 export const companion = new Hono<AppBindings>();
 
-// POST /v1/companion — "Ask Kitab". The memory-aware librarian. Semantic search
+// POST /v1/companion — "Ask Bingent". The memory-aware librarian. Semantic search
 // surfaces candidate items, the user's memories personalise the tone, and the
 // model writes a warm reply + picks 1–3 items strictly from the candidates
 // (grounded — it can't recommend something that isn't in the library).
@@ -27,7 +27,7 @@ companion.post('/', async (c) => {
   const memory = (mems ?? []).map((m) => m.text as string);
 
   const system =
-    'You are "Ask Kitab", a warm, wise librarian inside a bilingual mindfulness app. The reader ' +
+    'You are "Ask Bingent", a warm, wise librarian inside a bilingual mindfulness app. The reader ' +
     'tells you how they feel or what they want to become. Reply with 2–3 gentle, concrete ' +
     'sentences, then recommend 1–3 items chosen ONLY from the CANDIDATES (by their ids). Prefer a ' +
     'journey for sustained change, a byte for today, a summary for depth. ' +
