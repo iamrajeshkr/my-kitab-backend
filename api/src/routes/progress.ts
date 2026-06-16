@@ -65,10 +65,15 @@ progress.get('/', async (c) => {
     .select('item_kind, item_id, position, updated_at')
     .order('updated_at', { ascending: false })
     .limit(40);
-  // Continue = items whose *current* place is < 100%. An item finished long ago
-  // (completed_at set) but replayed partway through still belongs here, so we key
-  // off the live position flag, not the sticky marker.
-  const list = (rows ?? []).filter((r: any) => r.position?.completed !== true).slice(0, 12);
+  // Continue = items whose *current* place is < 100% AND that the user has spent
+  // real time on (≥30s into the current track, or past the first journey chapter).
+  // Progress rows are saved within ~5s of opening, so without this floor an item
+  // would clutter "Pick up where you paused" the instant it's opened, at 0%. An
+  // item finished long ago (completed_at set) but replayed partway still belongs
+  // here, so we key off the live position, not the sticky marker.
+  const MIN_SEC = 30;
+  const started = (p: any) => (p?.audioSec ?? 0) >= MIN_SEC || (p?.chapterSeq ?? 0) > 1;
+  const list = (rows ?? []).filter((r: any) => r.position?.completed !== true && started(r.position)).slice(0, 12);
   if (!list.length) return c.json({ items: [] });
 
   const ids = [...new Set(list.map((r) => r.item_id as string))];
