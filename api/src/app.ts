@@ -28,6 +28,7 @@ import { arcs } from './routes/arcs.js';
 import { similar } from './routes/similar.js';
 import { playlists } from './routes/playlists.js';
 import { home } from './routes/home.js';
+import { profile } from './routes/profile.js';
 
 // The configured Hono app — no server binding here. Local dev wraps it in
 // @hono/node-server (src/index.ts); Vercel wraps it in @hono/node-server/vercel
@@ -35,7 +36,15 @@ import { home } from './routes/home.js';
 export const app = new Hono<AppBindings>();
 
 app.use('*', honoLogger());
-app.use('*', cors()); // allow the Expo (web) origin to call the API
+// Allow the web app (any origin) to call the API. Default cors() omits the
+// Authorization/Content-Type headers from the preflight, which silently blocks
+// every cross-origin POST/DELETE (events, playlist delete) from bingent.vercel.app.
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+}));
 app.onError(onError);
 
 // Unauthenticated liveness probe.
@@ -73,6 +82,7 @@ v1.route('/arcs', arcs);
 v1.route('/similar', similar);
 v1.route('/playlists', playlists);
 v1.route('/home', home);
+v1.route('/profile', profile);
 app.route('/v1', v1);
 
 export default app;
