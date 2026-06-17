@@ -56,8 +56,14 @@ home.get('/', async (c) => {
   ]);
   const recItems = (recRes.data ?? []) as any[];
 
-  // hero = the top weather-fit pick
-  const top = recItems[0];
+  // Filter RPC results through the engaged set. The RPC's own `seen` CTE only
+  // excludes completed/saved/rated items, so something merely *opened* or tracked
+  // via progress (including finished via completed_at) still surfaces. Same fix
+  // as recommend.ts (commit 8ae5519) — applied here for the hero + rails.
+  const freshRecs = recItems.filter((it: any) => !engaged.has(`${it.kind}:${it.id}`));
+
+  // hero = the top weather-fit pick that the user hasn't already engaged with
+  const top = freshRecs[0] ?? null;
   const hero = top ? { kind: top.kind, id: top.id, title: top.title, author: top.author, cover: top.cover, reason: top.reason } : null;
 
   // cross-rail dedup: an item shows in at most one rail, and never if engaged.
