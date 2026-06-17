@@ -478,7 +478,8 @@ create index if not exists idx_safety_user on public.safety_flags (user_id, crea
 
 -- Maintain item_stats from events (open / complete / save / unsave).
 create or replace function public.tg_events_rollup()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+security definer set search_path = public as $$
 begin
   if new.item_id is null or new.item_kind is null then
     return new;
@@ -527,7 +528,8 @@ create trigger events_touch_profile after insert on public.events
 
 -- Maintain rating rollup in item_stats.
 create or replace function public.tg_ratings_rollup()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+security definer set search_path = public as $$
 begin
   if tg_op = 'INSERT' then
     insert into public.item_stats (item_kind, item_id, rating_sum, rating_count, updated_at)
