@@ -32,14 +32,19 @@ garden.get('/', async (c) => {
 
   const since = new Date(Date.now() - 32 * 86_400_000).toISOString();
 
-  // These four are independent — run them together instead of one after another.
-  const [summaryRes, doneRes, inProgRes, evRes] = await Promise.all([
+  // These are independent — run them together instead of one after another.
+  const [summaryRes, doneRes, inProgRes, evRes, profRes] = await Promise.all([
     db.rpc('garden_summary', { p_user: userId }),
     db.from('progress').select('item_kind, item_id, completed_at').not('completed_at', 'is', null).order('completed_at', { ascending: false }).limit(60),
     db.from('progress').select('item_kind', { count: 'exact', head: true }).is('completed_at', null),
     db.from('events').select('created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(400),
+    db.from('profiles').select('display_name').eq('id', userId).maybeSingle(),
   ]);
   if (summaryRes.error) throw summaryRes.error;
+
+  // Server-truth activity days (UTC) — drives the streak/tending week + calendar.
+  const active_days = [...new Set((evRes.data ?? []).map((e: any) => (e.created_at as string).slice(0, 10)))];
+  const display_name = (profRes.data?.display_name as string) ?? null;
 
   // Finished reads → join display fields (needs the ids from above).
   const dlist = doneRes.data ?? [];
@@ -63,5 +68,5 @@ garden.get('/', async (c) => {
   }
 
   const streak = computeStreak((evRes.data ?? []).map((e: any) => e.created_at as string));
-  return c.json({ ...(summaryRes.data as object), finished, in_progress: inProgRes.count ?? 0, streak });
+  return c.json({ ...(summaryRes.data as object), finished, in_progress: inProgRes.count ?? 0, streak, active_days, display_name });
 });

@@ -57,6 +57,7 @@ playlists.get('/saved', async (c) => {
 
   let recentRows: any[] = [];
   const counts = new Map<number, number>();
+  const coverRows = new Map<number, any[]>(); // playlist_id -> up to 4 items for a collage
   if (ids.length) {
     const { data: its } = await db
       .from('playlist_items')
@@ -64,20 +65,43 @@ playlists.get('/saved', async (c) => {
       .in('playlist_id', ids)
       .order('created_at', { ascending: false })
       .limit(200);
-    for (const it of its ?? []) counts.set(it.playlist_id, (counts.get(it.playlist_id) ?? 0) + 1);
     const seen = new Set<string>();
     for (const it of its ?? []) {
+      counts.set(it.playlist_id, (counts.get(it.playlist_id) ?? 0) + 1);
+      const arr = coverRows.get(it.playlist_id) ?? [];
+      if (arr.length < 4) { arr.push(it); coverRows.set(it.playlist_id, arr); }
       const key = `${it.item_kind}:${it.item_id}`;
       if (!seen.has(key)) { seen.add(key); recentRows.push(it); }
-      if (recentRows.length >= 12) break;
     }
+    recentRows = recentRows.slice(0, 16);
   }
 
+  // one enrich pass over everything we need to display
+  const allRows = [...recentRows, ...[...coverRows.values()].flat()];
+  const enriched = await enrich(c.get('adminDb'), allRows);
+  const byKey = new Map(enriched.map((m: any) => [`${m.kind}:${m.id}`, m]));
+  const coversFor = (pid: number) =>
+    (coverRows.get(pid) ?? []).map((r: any) => byKey.get(`${r.item_kind}:${r.item_id}`)).filter(Boolean);
+
   return c.json({
-    collections: (pls ?? []).map((p: any) => ({ id: p.id, name: p.name, count: counts.get(p.id) ?? 0 })),
+    collections: (pls ?? []).map((p: any) => ({ id: p.id, name: p.name, count: counts.get(p.id) ?? 0, covers: coversFor(p.id) })),
     highlights_count: highlights ?? 0,
-    recent: await enrich(c.get('adminDb'), recentRows),
+    recent: recentRows.map((r: any) => byKey.get(`${r.item_kind}:${r.item_id}`)).filter(Boolean),
   });
+});
+
+// DELETE /v1/playlists/saved/:kind/:itemId — remove an item from ALL the user's
+// collections at once (the "delete from saved everywhere" gesture). RLS keeps it
+// scoped to playlists the user owns.
+playlists.delete('/saved/:kind/:itemId', async (c) => {
+  const { error } = await c
+    .get('db')
+    .from('playlist_items')
+    .delete()
+    .eq('item_kind', c.req.param('kind'))
+    .eq('item_id', c.req.param('itemId'));
+  if (error) throw error;
+  return c.json({ ok: true });
 });
 
 // POST /v1/playlists { name } — create a collection.
