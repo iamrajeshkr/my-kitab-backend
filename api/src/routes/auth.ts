@@ -60,13 +60,13 @@ authPublic.post('/signup', async (c) => {
 
   const { data, error } = await admin
     .from('profiles')
-    .insert({ username: uname, password_hash: hashPassword(password), display_name: display_name ?? username, is_guest: false })
+    .insert({ username: uname, password_hash: hashPassword(password), display_name: display_name ?? null, is_guest: false })
     .select('id, display_name')
     .single();
   if (error) throw error;
 
   const token = await mintAccessToken(data!.id as string);
-  return c.json({ userId: data!.id, token, display_name: data!.display_name ?? username, avatar_url: null });
+  return c.json({ userId: data!.id, token, display_name: (data!.display_name as string | null) ?? null, avatar_url: null });
 });
 
 // PUBLIC preview compose — the value moment in onboarding, before an account
@@ -105,5 +105,5 @@ authPublic.post('/signin', async (c) => {
     return c.json({ error: 'Wrong username or password.' }, 401);
   }
   const token = await mintAccessToken(data.id as string);
-  return c.json({ userId: data.id, token, display_name: (data.display_name as string) ?? uname, avatar_url: (data.avatar_url as string) ?? null });
+  return c.json({ userId: data.id, token, display_name: (data.display_name as string | null) ?? null, avatar_url: (data.avatar_url as string) ?? null });
 });
