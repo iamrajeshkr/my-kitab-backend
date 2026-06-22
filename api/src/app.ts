@@ -29,6 +29,8 @@ import { similar } from './routes/similar.js';
 import { playlists } from './routes/playlists.js';
 import { home } from './routes/home.js';
 import { profile } from './routes/profile.js';
+import { admin } from './routes/admin.js';
+
 
 // The configured Hono app — no server binding here. Local dev wraps it in
 // @hono/node-server (src/index.ts); Vercel wraps it in @hono/node-server/vercel
@@ -83,6 +85,8 @@ v1.route('/similar', similar);
 v1.route('/playlists', playlists);
 v1.route('/home', home);
 v1.route('/profile', profile);
+v1.route('/admin', admin);
+
 app.route('/v1', v1);
 
 export default app;
